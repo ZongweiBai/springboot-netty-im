@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.github.baymin.im</groupId>
+    <artifactId>netty-im-project</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <modules>
+        <module>netty-im-parent</module>
+        <module>netty-im-websocket</module>
+        <module>netty-im-websocket-server</module>
+    </modules>
+
+    <profiles>
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <module>netty-im-parent</module>
+                <module>netty-im-websocket</module>
+                <module>netty-im-websocket-server</module>
+            </modules>
+        </profile>
+    </profiles>
+
+</project>

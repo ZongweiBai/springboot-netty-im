@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>IM聊天室—登录</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta name="keywords"
+          content="Transparent Sign In Form Responsive Widget,Login form widgets, Sign up Web forms , Login signup Responsive web form,Flat Pricing table,Flat Drop downs,Registration Forms,News letter Forms,Elements"/>
+    <script type="application/x-javascript">
+        addEventListener("load", function () {
+            setTimeout(hideURLbar, 0);
+        }, false);
+
+        function hideURLbar() {
+            window.scrollTo(0, 1);
+        }
+    </script>
+    <script th:src="@{js/common/axios.min.js}"></script>
+    <script th:src="@{js/common/vue.js}"></script>
+    <link rel="icon" th:href="@{img/chat.ico}" type="image/x-icon"/>
+    <link rel="stylesheet" th:href="@{css/common/font-awesome.css}"/> <!-- Font-Awesome-Icons-CSS -->
+    <link rel="stylesheet" th:href="@{css/login.css}" type="text/css" media="all"/> <!-- Style-CSS -->
+</head>
+<body class="background">
+<div class="header-w3l">
+    <h1>IM聊天室</h1>
+</div>
+<div class="main-content-agile" id="main_app">
+    <div class="sub-main-w3">
+        <h2>登录</h2>
+        <form>
+
+            <div class="icon1">
+                <input placeholder="用户名" v-model="user.username" type="text"/>
+            </div>
+
+            <div class="icon2">
+                <input placeholder="密码" v-model="user.password" type="password"/>
+            </div>
+
+            <div class="clear"></div>
+            <input type="button" value="登录" @click="login"/>
+        </form>
+    </div>
+</div>
+<div class="footer">
+    <p>&copy; 2021 github.com/ZongweiBai, All Rights Reserved </p>
+</div>
+</body>
+<script type="text/javascript">
+    new Vue({
+        el: '#main_app',
+        data: {
+            user: {
+                username: '',
+                password: ''
+            }
+        },
+        methods: {
+            login() {
+                axios({
+                    url: '/login',
+                    method: 'post',
+                    data: {
+                        username: this.user.username,
+                        password: this.user.password
+                    },
+                    transformRequest: [function(data) {
+                        let ret = ''
+                        for(let it in data) {
+                            ret += encodeURIComponent(it) + '=' + encodeURIComponent(data[it]) + '&'
+                        }
+                        return ret
+                    }],
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                }).then(function (response) {
+                    if (response.data.status === 200) {
+                        window.location.href = "chat";
+                    } else {
+                        alert(response.data.error);
+                    }
+                }).catch(function (error) {
+                    alert(error.response.data.error);
+                });
+            }
+        }
+    })
+</script>
+</html>

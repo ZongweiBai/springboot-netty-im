@@ -1,0 +1,605 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>IM聊天室</title>
+    <link rel="icon" th:href="@{img/chat.ico}" type="image/x-icon"/>
+    <link rel="stylesheet" type="text/css" th:href="@{css/chatroom.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{css/common/layui.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{css/common/bootstrap.min.css}">
+</head>
+<body>
+<div class="qqBox" id="main_app">
+    <div class="BoxHead">
+        <div class="headImg">
+            <img :src="userInfo.avatarUrl"/>
+        </div>
+        <div class="internetName">{{ userInfo.username }}</div>
+        <button class="close logout" @click="logout">&times;</button>
+    </div>
+    <div class="context">
+        <!-- 左侧好友栏 -->
+        <div class="conLeft">
+            <ul v-for="(item, index) in groupInfos">
+                <li @click="friendLiClickEvent('group', index)"
+                    v-bind:class="{bg:index==classData.friendLiSelectIndex&&'group'==classData.friendLiSelectType}">
+                    <div class="liLeft">
+                        <span v-show="item.unreadNum>0" class="layui-badge badge-avatar">
+                            {{ item.unreadNum }}
+                        </span>
+                        <img :src="item.groupAvatarUrl">
+                    </div>
+                    <div class="liRight">
+                        <span class="hidden-groupId">{{ item.groupId }}</span>
+                        <span class="intername">{{ item.groupName }}</span>
+                        <span class="infor">{{ item.lastMessage }}</span>
+                    </div>
+                </li>
+            </ul>
+            <ul v-for="(item, index) in friends">
+                <li @click="friendLiClickEvent('friend', index)"
+                    v-bind:class="{bg:index==classData.friendLiSelectIndex&&'friend'==classData.friendLiSelectType}">
+                    <div class="liLeft">
+                        <span v-show="item.unreadNum>0" class="layui-badge badge-avatar">
+                            {{ item.unreadNum }}
+                        </span>
+                        <img :src="item.avatarUrl">
+                    </div>
+                    <div class="liRight">
+                        <span class="hidden-userId">{{ item.userId }}</span>
+                        <span class="intername">{{ item.username }}</span>
+                        <span class="infor">{{ item.lastMessage }}</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 聊天窗口 -->
+        <div class="conRight" v-bind:style="{ display: classData.showRightChatArea}">
+            <div class="Righthead">
+                <div class="headName">{{ chatData.headName }}</div>
+            </div>
+            <div class="RightCont" ref="scrollChatArea">
+                <ul class="newsList-temp"></ul>
+                <ul class="newsList" v-for="(item, index) in chatData.msgBoxData">
+                    <li class="rightNews" v-if="item.sender=='me'">
+                        <div class="rightnesHead">
+                            <img :src="item.avatarUrl"/>
+                        </div>
+                        <div v-if="item.type=='message'" class="rightnews" v-html="item.message"></div>
+                        <div v-else-if="item.type=='file'" class="send-file-shown">
+                            <div class="media">
+                                <a :href="item.fileUrl" class="media-left">
+                                    <i class="glyphicon glyphicon-file" style="font-size:28pt;"></i>
+                                </a>
+                                <div class="media-body">
+                                    <h5 class="media-heading">{{ item.originalFilename }}</h5>
+                                    <span>{{ item.fileSize }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li v-else>
+                        <div class="answerHead">
+                            <img :src="item.avatarUrl"/>
+                        </div>
+                        <div v-if="item.type=='message'" class="answers" v-html="item.message"></div>
+                        <div v-else-if="item.type=='file'" class="receive-file-shown" style="margin-right: 270px;">
+                            <div class="media">
+                                <a :href="item.fileUrl" class="media-left">
+                                    <i class="glyphicon glyphicon-file" style="font-size:28pt;"></i>
+                                </a>
+                                <div class="media-body">
+                                    <h5 class="media-heading">{{ item.originalFilename }}</h5>
+                                    <span>{{ item.fileSize }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="RightFoot">
+                <div class="emjon" v-bind:style="{ display: emjStatus}" @mouseleave="toggleEmj(false)">
+                    <ul v-for="item in 24">
+                        <li><img :src="getEmjImg(item)" @click="sendMessage('emoji', item)"></li>
+                    </ul>
+                </div>
+                <div class="footTop">
+                    <ul>
+                        <li class="ExP" @mouseenter="toggleEmj(true)">
+                            <img src="img/emoji.jpg">
+                        </li>
+                        <li class="file-upload">
+                            <a href="javascript:void(0);" style="position: relative;">
+                                <input type="file"
+                                       style="opacity: 0;position: absolute;width: 16px;cursor: pointer"
+                                       @change="uploadFile"/>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="inputBox">
+                    <input id="toUserId" type="hidden">
+                    <input id="toGroupId" type="hidden">
+                    <textarea id="dope" style="width: 99%;height: 75px; border: none;outline: none;" name="" rows=""
+                              cols="" v-model="chatData.charInputArea" @keyup.enter="sendMessage('text')">
+                    </textarea>
+                    <button title="按下回车可发送" class="sendBtn" @click="sendMessage('text')">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="upload-modal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button class="close" data-dismiss="modal">&times;</button>
+                    <h3 class="modal-title text-primary">文件上传</h3>
+                </div>
+                <div class="modal-body">
+                    <form class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">选择文件</label>
+                            <div class="col-sm-9">
+                                <input type="file" name="file"
+                                       class="col-sm-9 myfile"/>
+                                <p class="help-block">注意：文件大小不超过30M，有效期为7天</p>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button id="upload-cancel" class="btn btn-sm btn-muted" data-dismiss="modal">
+                        <i class="glyphicon glyphicon-remove"></i> 取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" th:src="@{js/common/axios.min.js}"></script>
+<script type="text/javascript" th:src="@{js/common/vue.js}"></script>
+<script type="text/javascript" th:src="@{js/common/SentMessageMap.js}"></script>
+<script type="text/javascript">
+    const vue = new Vue({
+        el: '#main_app',
+        data: {
+            socket: '',
+            userInfo: {
+                userId: '',
+                username: '',
+                avatarUrl: ''
+            },
+            groupInfos: [],
+            friends: [],
+            classData: {
+                friendLiSelectType: '',
+                friendLiSelectIndex: '-1',
+                showRightChatArea: ''
+            },
+            chatData: {
+                headName: '',
+                currentChatTarget: '',
+                toUserId: '',
+                toGroupId: '',
+                charInputArea: '',
+                msgBoxData: []
+            },
+            emjStatus: '',
+            sentMessageMap: new SentMessageMap()
+        },
+        methods: {
+            // 读取并设置当前用户信息
+            setUserInfo() {
+                axios({
+                    url: 'chat/user_info',
+                    method: 'post'
+                }).then(function (response) {
+                    if (response.status === 200) {
+                        const responseData = response.data;
+
+                        vue.userInfo.userId = responseData.userId;
+                        vue.userInfo.username = responseData.username;
+                        vue.userInfo.avatarUrl = responseData.avatarUrl;
+
+                        responseData.groupList.forEach(value => {
+                            value.unreadNum = 0
+                            value.lastMessage = ''
+                            vue.groupInfos.push(value)
+                            vue.sentMessageMap.put(value.groupId, [])
+                        })
+
+                        responseData.friendList.forEach(value => {
+                            value.unreadNum = 0
+                            value.lastMessage = ''
+                            vue.friends.push(value)
+                            vue.sentMessageMap.put(value.userId, [])
+                        })
+                    } else {
+                        alert(response.data.error);
+                    }
+                }).catch(function (error) {
+                    console.log(error)
+                    alert(error.response);
+                });
+            },
+            // 初始化websocket
+            initWebsocket() {
+                if (!window.WebSocket) {
+                    window.WebSocket = window.MozWebSocket;
+                }
+                if (window.WebSocket) {
+                    // 本地测试连接
+                    this.socket = new WebSocket("ws://localhost:14500/ws-chat");
+                    // spring cloud gateway组合consul的访问连接
+                    // this.socket = new WebSocket("ws://localhost:8080/ws-im/ws-chat");
+                    // 监听socket连接
+                    this.socket.onopen = this.socketOpen;
+                    // 监听socket断开
+                    this.socket.onclose = this.socketClose;
+                    // 监听socket消息
+                    this.socket.onmessage = this.socketMessage;
+                    // this.socket.onerror = this.socketError;
+                } else {
+                    alert("您的浏览器不支持WebSocket！");
+                }
+            },
+            // 以下三个method处理socket的事件
+            socketOpen() {
+                setTimeout(function (event) {
+                    console.log("WebSocket已成功连接！");
+                    vue.wsRegister();
+                }, 1000)
+            },
+            socketClose() {
+                console.log("WebSocket已关闭,重新连接WebSocket")
+                this.initWebsocket()
+            },
+            socketMessage(event) {
+                const json = JSON.parse(event.data);
+                console.log(json)
+                if (json.status === 200) {
+                    const type = json.type;
+                    console.log("收到一条新信息，类型为：" + type);
+                    switch (type) {
+                        case "REGISTER":
+                            this.wsRegisterReceive();
+                            break;
+                        case "SINGLE_SENDING":
+                            this.wsMessageReceive('friend', json, 'message');
+                            break;
+                        case "GROUP_SENDING":
+                            this.wsMessageReceive('group', json, 'message');
+                            break;
+                        case "FILE_MSG_SINGLE_SENDING":
+                            this.wsMessageReceive('friend', json, 'file');
+                            break;
+                        case "FILE_MSG_GROUP_SENDING":
+                            this.wsMessageReceive('group', json, 'file');
+                            break;
+                        default:
+                            console.log("不正确的类型！");
+                    }
+                } else {
+                    alert(json.error);
+                    console.log(json.error);
+                }
+            },
+            // 以下开始websocket的业务处理
+            wsRegister() {
+                if (!window.WebSocket) {
+                    return;
+                }
+                if (this.socket.readyState === WebSocket.OPEN) {
+                    const data = {
+                        "fromUserId": this.userInfo.userId,
+                        "type": "REGISTER"
+                    };
+                    console.log(data)
+                    this.socket.send(JSON.stringify(data));
+                } else {
+                    alert("Websocket连接没有开启！");
+                }
+            },
+            wsMessageSend(content) {
+                if (!window.WebSocket) {
+                    return;
+                }
+                if (this.socket.readyState === WebSocket.OPEN) {
+                    let data;
+                    if (this.chatData.currentChatTarget === 'friend') {
+                        data = {
+                            "fromUserId": this.userInfo.userId,
+                            "toUserId": this.chatData.toUserId,
+                            "content": content,
+                            "type": "SINGLE_SENDING"
+                        };
+                    } else {
+                        data = {
+                            "fromUserId": this.userInfo.userId,
+                            "toGroupId": this.chatData.toGroupId,
+                            "content": content,
+                            "type": "GROUP_SENDING"
+                        };
+                    }
+                    this.socket.send(JSON.stringify(data));
+                } else {
+                    alert("Websocket连接没有开启！");
+                }
+            },
+            wsFileMessageSend(originalFilename, fileUrl, fileSize) {
+                if (!window.WebSocket) {
+                    return;
+                }
+                if (this.socket.readyState === WebSocket.OPEN) {
+                    let data;
+                    if (this.chatData.currentChatTarget === 'friend') {
+                        data = {
+                            "fromUserId": this.userInfo.userId,
+                            "toUserId": this.chatData.toUserId,
+                            "originalFilename": originalFilename,
+                            "fileUrl": fileUrl,
+                            "fileSize": fileSize,
+                            "type": "FILE_MSG_SINGLE_SENDING"
+                        };
+                    } else {
+                        data = {
+                            "fromUserId": this.userInfo.userId,
+                            "toGroupId": this.chatData.toGroupId,
+                            "originalFilename": originalFilename,
+                            "fileUrl": fileUrl,
+                            "fileSize": fileSize,
+                            "type": "FILE_MSG_GROUP_SENDING"
+                        };
+                    }
+                    this.socket.send(JSON.stringify(data));
+                } else {
+                    alert("Websocket连接没有开启！");
+                }
+            },
+            wsRegisterReceive() {
+                console.log("userId为 " + this.userInfo.userId + " 的用户登记到在线用户表成功！");
+            },
+            /**
+             * 对socket聊天消息进行处理
+             * chatType: 群聊|私聊
+             * data: 内容
+             * msgType: 消息|文件
+             */
+            wsMessageReceive(chatType, data, msgType) {
+                let msgData
+                const fromUserId = data.fromUserId;
+                let fromAvatarUrl;
+                this.friends.forEach(value => {
+                    if (value.userId === fromUserId) {
+                        fromAvatarUrl = value.avatarUrl;
+                    }
+                })
+                let content = data.content;
+                if (msgType === 'message') {
+                    msgData = {'sender': 'other', 'type': 'message', 'message': content, 'avatarUrl': fromAvatarUrl}
+                } else if (msgType === 'file') {
+                    msgData = {
+                        'sender': 'other', 'type': 'file', 'originalFilename': data.originalFilename,
+                        'fileSize': data.fileSize,
+                        'fileUrl': data.fileUrl, 'avatarUrl': fromAvatarUrl
+                    }
+                    content = '[文件]'
+                }
+
+                if (chatType === 'group') {
+                    const toGroupId = data.toGroupId
+                    if (toGroupId === this.chatData.toGroupId) {
+                        this.chatData.msgBoxData.push(msgData)
+                        this.sentMessageMap.put(this.chatData.toGroupId, this.chatData.msgBoxData)
+                    } else {
+                        let msgBoxData = this.sentMessageMap.get(toGroupId)
+                        if (msgBoxData === null) {
+                            msgBoxData = []
+                        }
+                        msgBoxData.push(msgData)
+                        this.sentMessageMap.put(toGroupId, msgData)
+                        this.groupInfos.forEach(value => {
+                            if (value.groupId === toGroupId) {
+                                value.unreadNum++
+                                if (content.startsWith('<img')) {
+                                    content = '[表情]'
+                                }
+                                // 只显示前八个字符
+                                if (content.length > 8) {
+                                    content = content.substring(0, 8) + "..."
+                                } else
+                                    value.lastMessage = content
+                            }
+                        })
+                    }
+                } else {
+                    if (fromUserId === this.chatData.toUserId) {
+                        this.chatData.msgBoxData.push(msgData)
+                        this.sentMessageMap.put(this.chatData.fromUserId, this.chatData.msgBoxData)
+                    } else {
+                        let msgBoxData = this.sentMessageMap.get(fromUserId)
+                        if (msgBoxData === null) {
+                            msgBoxData = []
+                        }
+                        msgBoxData.push(msgData)
+                        this.sentMessageMap.put(fromUserId, msgData)
+                        this.friends.forEach(value => {
+                            if (value.userId === fromUserId) {
+                                value.unreadNum++
+                                if (content.startsWith('<img')) {
+                                    content = '[表情]'
+                                }
+                                // 只显示前八个字符
+                                if (content.length > 8) {
+                                    content = content.substring(0, 8) + "..."
+                                }
+                                value.lastMessage = content
+                            }
+                        })
+                    }
+                }
+                this.scrollToChatBottom();
+            },
+            /**
+             * 打开对话框
+             * @param type
+             * @param index
+             */
+            friendLiClickEvent(type, index) {
+                this.classData.friendLiSelectType = type;
+                this.classData.friendLiSelectIndex = index;
+
+                this.classData.showRightChatArea = '-webkit-box';
+
+                this.chatData.currentChatTarget = type;
+                let sendMessageId;
+                if (type === 'group') {
+                    let groupInfo = this.groupInfos[index]
+                    this.chatData.headName = groupInfo.groupName
+                    this.chatData.toGroupId = groupInfo.groupId
+                    this.chatData.toUserId = ''
+                    sendMessageId = groupInfo.groupId
+                    this.groupInfos.forEach(value => {
+                        if (value.groupId === sendMessageId) {
+                            value.unreadNum = 0
+                            value.lastMessage = ''
+                        }
+                    })
+                } else {
+                    let friendInfo = this.friends[index]
+                    this.chatData.headName = friendInfo.username
+                    this.chatData.toUserId = friendInfo.userId
+                    this.chatData.toGroupId = ''
+                    sendMessageId = friendInfo.userId
+                    this.friends.forEach(value => {
+                        if (value.userId === sendMessageId) {
+                            value.unreadNum = 0
+                            value.lastMessage = ''
+                        }
+                    })
+                }
+                if (this.sentMessageMap.get(sendMessageId) !== null) {
+                    this.chatData.msgBoxData = this.sentMessageMap.get(sendMessageId);
+                    this.scrollToChatBottom();
+                }
+            },
+            toggleEmj(action) {
+                this.emjStatus = action ? 'block' : '';
+            },
+            getEmjImg(value) {
+                if (value < 10) {
+                    value = '0' + value;
+                }
+                return "img/emoji/emoji_" + value + ".png";
+            },
+            // 发送消息
+            sendMessage(msgType, index) {
+                if (msgType === 'text' && this.chatData.charInputArea === '') {
+                    return;
+                }
+                if (msgType === 'emoji') {
+                    this.toggleEmj(false)
+                }
+                const msgData = {
+                    'sender': 'me',
+                    'type': 'message',
+                    'message': msgType === 'text' ? this.chatData.charInputArea : '<img class="Expr" src="' + this.getEmjImg(index) + '">',
+                    'avatarUrl': this.userInfo.avatarUrl
+                }
+                this.wsMessageSend(msgData.message);
+                this.chatData.msgBoxData.push(msgData)
+                this.chatData.charInputArea = '';
+                if (this.chatData.currentChatTarget === 'group') {
+                    this.sentMessageMap.put(this.chatData.toUserId, this.chatData.msgBoxData)
+                } else {
+                    this.sentMessageMap.put(this.chatData.toGroupId, this.chatData.msgBoxData)
+                }
+                this.scrollToChatBottom();
+            },
+            /**
+             *  上传图片
+             */
+            uploadFile(e) {
+                console.log(e)
+                const file = e.target.files[0]; // js获取文件对象
+                let formData = new FormData();
+                formData.append('file', file) // 添加字段与对应的值
+                if (file.size > 307200) {
+                    alert('上传图片不得超过200kb！');
+                    return;
+                }
+                axios.post('/file/upload', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                }).then(res => {
+                    console.log(res.data)
+                    const msgData = {
+                        'sender': 'me',
+                        'type': 'file',
+                        'originalFilename': res.data.originalFilename,
+                        'fileSize': res.data.fileSize,
+                        'fileUrl': res.data.fileUrl,
+                        'avatarUrl': this.userInfo.avatarUrl
+                    }
+                    this.wsFileMessageSend(res.data.originalFilename, res.data.fileUrl, res.data.fileSize)
+                    this.chatData.msgBoxData.push(msgData)
+                    if (this.chatData.currentChatTarget === 'group') {
+                        this.sentMessageMap.put(this.chatData.toUserId, this.chatData.msgBoxData)
+                    } else {
+                        this.sentMessageMap.put(this.chatData.toGroupId, this.chatData.msgBoxData)
+                    }
+                    this.scrollToChatBottom();
+                }).catch(err => {
+                    console.log(err);
+                    alert(err.response);
+                });
+            },
+            /**
+             * 退出登录
+             */
+            logout() {
+                // 1. 关闭websocket连接
+                this.socket.close()
+
+                // 2. 注销登录状态
+                axios.post('logout')
+                    .then(res => {
+                        if (res.data.status === 200) {
+                            // 3. 注销成功，进行页面跳转
+                            console.log("注销成功！");
+                            window.location.href = "/";
+                        } else {
+                            alert(res.data.msg);
+                        }
+                    }).catch(err => {
+                    console.log(err);
+                    alert(err.response);
+                })
+            },
+            /**
+             * 滚动到底部
+             */
+            scrollToChatBottom() {
+                const scrollChatArea = this.$refs.scrollChatArea;
+                setTimeout(() => {
+                    scrollChatArea.scrollTop = scrollChatArea.scrollHeight;
+                }, 0)
+            }
+        },
+        computed: {},
+        created: function () {
+
+        },
+        mounted: function () {
+            this.setUserInfo();
+            this.initWebsocket();
+        }
+    })
+</script>
+</body>
+</html>
