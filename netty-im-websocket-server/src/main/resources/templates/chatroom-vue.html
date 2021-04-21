@@ -205,19 +205,29 @@
                         vue.userInfo.username = responseData.username;
                         vue.userInfo.avatarUrl = responseData.avatarUrl;
 
-                        responseData.groupList.forEach(value => {
-                            value.unreadNum = 0
-                            value.lastMessage = ''
-                            vue.groupInfos.push(value)
-                            vue.sentMessageMap.put(value.groupId, [])
-                        })
+                        if (responseData.groupList) {
+                            responseData.groupList.forEach(value => {
+                                if (!value) {
+                                    return
+                                }
+                                value.unreadNum = 0
+                                value.lastMessage = ''
+                                vue.groupInfos.push(value)
+                                vue.sentMessageMap.put(value.groupId, [])
+                            })
+                        }
 
-                        responseData.friendList.forEach(value => {
-                            value.unreadNum = 0
-                            value.lastMessage = ''
-                            vue.friends.push(value)
-                            vue.sentMessageMap.put(value.userId, [])
-                        })
+                        if (responseData.friendList) {
+                            responseData.friendList.forEach(value => {
+                                if (!value) {
+                                    return
+                                }
+                                value.unreadNum = 0
+                                value.lastMessage = ''
+                                vue.friends.push(value)
+                                vue.sentMessageMap.put(value.userId, [])
+                            })
+                        }
                     } else {
                         alert(response.data.error);
                     }

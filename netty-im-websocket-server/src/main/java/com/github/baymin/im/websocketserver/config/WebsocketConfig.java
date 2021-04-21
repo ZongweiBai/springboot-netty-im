@@ -58,7 +58,7 @@ public class WebsocketConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedHeaders(CorsConfiguration.ALL)
                 .allowedMethods(CorsConfiguration.ALL)
-                .allowedOrigins(CorsConfiguration.ALL)
+                .allowedOriginPatterns(CorsConfiguration.ALL)
                 .allowCredentials(true);
     }
 

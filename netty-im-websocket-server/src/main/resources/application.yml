@@ -2,6 +2,10 @@ server:
   port: 9999
   servlet:
     context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 # actuator相关配置
 management:
@@ -45,18 +49,14 @@ spring:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
     properties.hibernate.dialect: org.hibernate.dialect.MySQL5InnoDBDialect
-  http:
-    encoding:
-      charset: UTF-8
-      enabled: true
-      force: true
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
   redis:
     database: 0
-    host: 127.0.0.1
+    host: 192.168.111.128
     port: 6379
+    password: root
     timeout: 60000
     lettuce: #由于Spring Boot2.x 的改动，连接池相关配置需要通过spring.redis.lettuce.pool或者 spring.redis.jedis.pool 进行配置
       pool:
